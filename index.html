@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yaz Kampı Program Oluşturucu (TYT-YDT)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .topic-checkbox:checked + div {
+            background-color: #eff6ff;
+            border-color: #3b82f6;
+        }
+        .topic-checkbox:checked + div .check-icon {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .drop-zone { min-height: 60px; transition: all 0.2s ease; }
+        .drop-zone.drag-over { background-color: #eef2ff !important; outline: 2px dashed #818cf8; outline-offset: -4px; border-radius: 0.5rem; }
+        
+        /* Tabs */
+        .tab-btn { transition: all 0.2s ease; }
+        .tab-btn.active { background-color: #4f46e5; color: white; border-color: #4f46e5; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .tab-btn.inactive { background-color: white; color: #64748b; border-color: #cbd5e1; }
+        .tab-btn.inactive:hover { background-color: #f8fafc; border-color: #94a3b8; color: #334155; }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        <header class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 text-center">
+            <div class="inline-flex items-center justify-center p-3 bg-indigo-100 text-indigo-600 rounded-xl mb-4">
+                <i data-lucide="calendar-days" class="w-8 h-8"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-slate-800 mb-2">11. Sınıf Dil Öğrencileri Yaz Kampı</h1>
+            <p class="text-slate-500 max-w-2xl mx-auto">1 Temmuz - 24 Ağustos tarihleri arasında öğrencilerin TYT (9-10. Sınıf) eksiklerini kapatmak için tasarlanmıştır. İhtiyaç duyulan konuları seçin ve programı oluşturun.</p>
+        </header>
+
+        <!-- Öğrenci Sekmeleri -->
+        <div class="flex flex-wrap items-center justify-center gap-3 bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
+            <button class="tab-btn active px-6 py-2.5 rounded-xl font-medium text-sm border" data-student="Batın Kartal">
+                <i data-lucide="user" class="w-4 h-4 inline-block mr-1 mb-0.5"></i> Batın Kartal
+            </button>
+            <button class="tab-btn inactive px-6 py-2.5 rounded-xl font-medium text-sm border" data-student="Anna Melissa Kahraman">
+                <i data-lucide="user" class="w-4 h-4 inline-block mr-1 mb-0.5"></i> Anna Melissa Kahraman
+            </button>
+            <button class="tab-btn inactive px-6 py-2.5 rounded-xl font-medium text-sm border" data-student="Nesip Özyaşar">
+                <i data-lucide="user" class="w-4 h-4 inline-block mr-1 mb-0.5"></i> Nesip Özyaşar
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left Column: Topic Selection -->
+            <div class="lg:col-span-4 space-y-4">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sticky top-4 max-h-[85vh] flex flex-col">
+                    <h2 class="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
+                        <i data-lucide="check-square" class="w-5 h-5 text-indigo-500"></i>
+                        Eksik Konuları Seçin
+                    </h2>
+                    <p class="text-xs text-slate-500 mb-4 pb-4 border-b border-slate-100">Öğrencinin ihtiyacına göre ilgili konuları işaretleyin.</p>
+                    
+                    <div class="overflow-y-auto flex-grow pr-2 space-y-6" id="categories-container">
+                        <!-- Categories will be injected here via JS -->
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 mt-4">
+                        <button id="generateBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-xl transition-colors shadow-md flex items-center justify-center gap-2">
+                            <i data-lucide="cog" class="w-5 h-5"></i>
+                            Programı Oluştur (8 Hafta)
+                        </button>
+                        <div id="errorMsg" class="hidden text-rose-500 text-sm mt-2 text-center font-medium">Lütfen en az bir konu seçin!</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Generated Schedule -->
+            <div class="lg:col-span-8">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 min-h-[500px] flex flex-col relative">
+                    
+                    <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="table" class="w-6 h-6 text-emerald-500"></i>
+                        <span id="scheduleTitle">Batın Kartal - Takvimi</span>
+                        <span class="ml-2 text-xs font-medium bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full flex items-center gap-1 hidden sm:flex"><i data-lucide="mouse-pointer-2" class="w-3 h-3"></i> Sürükle-Bırak</span>
+                    </h2>
+                    
+                    <div class="flex gap-2">
+                        <button id="saveBtn" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm shadow-sm">
+                            <i data-lucide="save" class="w-4 h-4"></i>
+                            <span class="hidden md:inline">Kaydet</span>
+                        </button>
+                        <button id="copyBtn" class="hidden bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm shadow-sm">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                            <span class="hidden md:inline">Kopyala</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                    <div id="emptyState" class="flex-grow flex flex-col items-center justify-center text-slate-400">
+                        <i data-lucide="mouse-pointer-click" class="w-16 h-16 mb-4 opacity-50"></i>
+                        <p>Soldaki listeden konuları seçip "Programı Oluştur" butonuna tıklayın.</p>
+                    </div>
+
+                <!-- Success Toast -->
+                <div id="toastMsg" class="hidden absolute top-4 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-5 py-3 rounded-xl text-sm shadow-xl flex items-center gap-3 z-50 fade-in">
+                    <i id="toastIcon" data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+                    <span id="toastText">Tablo panoya kopyalandı!</span>
+                </div>
+
+                <!-- Table Output -->
+                    <div id="tableContainer" class="hidden overflow-x-auto pb-4">
+                        <table class="w-full text-left border-collapse" id="scheduleTable">
+                            <thead>
+                                <tr>
+                                    <th class="bg-slate-50 border-b-2 border-slate-200 p-3 text-sm font-bold text-slate-700 uppercase">Hafta</th>
+                                    <th class="bg-slate-50 border-b-2 border-slate-200 p-3 text-sm font-bold text-slate-700 uppercase">Tarih</th>
+                                    <th class="bg-slate-50 border-b-2 border-slate-200 p-3 text-sm font-bold text-slate-700 uppercase">TYT Türkçe</th>
+                                    <th class="bg-slate-50 border-b-2 border-slate-200 p-3 text-sm font-bold text-slate-700 uppercase">TYT Matematik</th>
+                                    <th class="bg-slate-50 border-b-2 border-slate-200 p-3 text-sm font-bold text-slate-700 uppercase">Sosyal / Fen / Dil</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody" class="text-sm">
+                                <!-- Rows injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Topic Database (9th and 10th Grade Focus + Pre-YDT)
+        const subjects = [
+            {
+                name: "TYT Türkçe",
+                color: "rose",
+                topics: [
+                    "Sözcükte Anlam", "Cümlede Anlam", "Paragraf (Günde 20 Soru Pratiği)", 
+                    "Ses Bilgisi", "Sözcük Türleri (İsim, Sıfat, Zamir)", 
+                    "Sözcük Türleri (Zarf, Edat, Bağlaç, Ünlem)", 
+                    "Fiiller ve Fiilimsiler", "Yazım Kuralları", "Noktalama İşaretleri"
+                ]
+            },
+            {
+                name: "TYT Matematik",
+                color: "blue",
+                topics: [
+                    "Temel Kavramlar", "Sayı Basamakları", "Rasyonel Sayılar", 
+                    "Birinci Dereceden Denklemler", "Üslü ve Köklü Sayılar", 
+                    "Çarpanlara Ayırma", "Oran - Orantı", "Sayı ve Kesir Problemleri",
+                    "Yaş ve Yüzde Problemleri", "Kümeler", "Fonksiyonlara Giriş"
+                ]
+            },
+            {
+                name: "TYT Sosyal Bilimler",
+                color: "amber",
+                topics: [
+                    "Tarih Bilimine Giriş & İlk Çağ", "İlk ve Orta Çağda Türk Dünyası",
+                    "İslam Tarihi & Türk-İslam Devletleri", "Osmanlı (Kuruluş ve Yükselme)",
+                    "Coğrafya: Doğa ve İnsan", "Dünya'nın Şekli ve Hareketleri",
+                    "Harita Bilgisi ve İklim", "Felsefeyle Tanışma & Bilgi Felsefesi"
+                ]
+            },
+            {
+                name: "TYT Fen Bilimleri (Temel)",
+                color: "emerald",
+                topics: [
+                    "Fizik Bilimine Giriş", "Madde ve Özellikleri", 
+                    "Kimya Bilimi ve Atom", "Periyodik Sistem", 
+                    "Biyoloji: Yaşam Bilimi", "Hücre ve Yapısı"
+                ]
+            },
+            {
+                name: "İngilizce (11. Sınıf Ön Hazırlık)",
+                color: "indigo",
+                topics: [
+                    "Tense Tekrarı (Present & Past)", "Tense Tekrarı (Future & Perfect)", 
+                    "Modals (Kip Belirteçleri)", "Temel Bağlaçlar (Conjunctions)", 
+                    "Reading Pratiği (Kısa Metinler)", "Vocabulary: Temel YDT Kelimeleri"
+                ]
+            }
+        ];
+
+        const weeks = [
+            { label: "1. Hafta", dates: "1 Tem - 7 Tem" },
+            { label: "2. Hafta", dates: "8 Tem - 14 Tem" },
+            { label: "3. Hafta", dates: "15 Tem - 21 Tem" },
+            { label: "4. Hafta", dates: "22 Tem - 28 Tem" },
+            { label: "5. Hafta", dates: "29 Tem - 4 Ağu" },
+            { label: "6. Hafta", dates: "5 Ağu - 11 Ağu" },
+            { label: "7. Hafta", dates: "12 Ağu - 18 Ağu" },
+            { label: "8. Hafta", dates: "19 Ağu - 24 Ağu" }
+        ];
+
+        // DOM Elements
+        const categoriesContainer = document.getElementById('categories-container');
+        const generateBtn = document.getElementById('generateBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        const emptyState = document.getElementById('emptyState');
+        const tableContainer = document.getElementById('tableContainer');
+        const tableBody = document.getElementById('tableBody');
+        const copyBtn = document.getElementById('copyBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const toastMsg = document.getElementById('toastMsg');
+        const toastText = document.getElementById('toastText');
+        const toastIcon = document.getElementById('toastIcon');
+        const scheduleTitle = document.getElementById('scheduleTitle');
+        const tabBtns = document.querySelectorAll('.tab-btn');
+
+        let draggedItem = null;
+
+        // State Management
+        let currentStudent = "Batın Kartal";
+        let studentsData = {
+            "Batın Kartal": null,
+            "Anna Melissa Kahraman": null,
+            "Nesip Özyaşar": null
+        };
+
+        function showToast(message, type = 'emerald') {
+            toastText.innerText = message;
+            toastIcon.setAttribute('data-lucide', type === 'emerald' ? 'check-circle' : 'info');
+            toastIcon.className = `w-5 h-5 text-${type}-400`;
+            lucide.createIcons();
+            
+            toastMsg.classList.remove('hidden');
+            toastMsg.classList.remove('fade-in');
+            void toastMsg.offsetWidth; // trigger reflow
+            toastMsg.classList.add('fade-in');
+            
+            setTimeout(() => {
+                toastMsg.classList.add('hidden');
+            }, 3000);
+        }
+
+        function extractScheduleFromDOM() {
+            const table = document.getElementById('scheduleTable');
+            if (tableContainer.classList.contains('hidden') || table.rows.length <= 1) return null;
+            
+            let schedule = [];
+            for (let i = 1; i < table.rows.length; i++) {
+                let row = table.rows[i];
+                let weekLabel = row.cells[0].innerText.trim();
+                let weekDates = row.cells[1].innerText.trim();
+                let trk = Array.from(row.cells[2].querySelectorAll('.topic-text')).map(el => el.innerText.trim());
+                let mat = Array.from(row.cells[3].querySelectorAll('.topic-text')).map(el => el.innerText.trim());
+                let other = Array.from(row.cells[4].querySelectorAll('.topic-text')).map(el => el.innerText.trim());
+                schedule.push({ label: weekLabel, dates: weekDates, trk, mat, other });
+            }
+            return schedule;
+        }
+
+        function saveCurrentStudentState() {
+            const selectedTopics = Array.from(document.querySelectorAll('.topic-checkbox:checked')).map(cb => cb.value);
+            const schedule = extractScheduleFromDOM();
+            
+            if (selectedTopics.length > 0 || schedule !== null) {
+                studentsData[currentStudent] = { selectedTopics, schedule };
+            }
+        }
+
+        function loadCurrentStudentState() {
+            scheduleTitle.innerText = `${currentStudent} - Takvimi`;
+            
+            // Checkboxları sıfırla
+            document.querySelectorAll('.topic-checkbox').forEach(cb => {
+                cb.checked = false;
+            });
+
+            const data = studentsData[currentStudent];
+            
+            if (!data) {
+                emptyState.classList.remove('hidden');
+                tableContainer.classList.add('hidden');
+                copyBtn.classList.add('hidden');
+                return;
+            }
+
+            if (data.selectedTopics) {
+                document.querySelectorAll('.topic-checkbox').forEach(cb => {
+                    if (data.selectedTopics.includes(cb.value)) {
+                        cb.checked = true;
+                    }
+                });
+            }
+
+            if (data.schedule && data.schedule.length > 0) {
+                renderTable(data.schedule);
+            } else {
+                emptyState.classList.remove('hidden');
+                tableContainer.classList.add('hidden');
+                copyBtn.classList.add('hidden');
+            }
+        }
+
+        function switchStudent(name) {
+            saveCurrentStudentState(); // Önceki sekmeyi hafızaya al
+            currentStudent = name;
+            
+            // Sekme tasarımlarını güncelle
+            tabBtns.forEach(btn => {
+                if (btn.dataset.student === name) {
+                    btn.classList.remove('inactive');
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                    btn.classList.add('inactive');
+                }
+            });
+            
+            loadCurrentStudentState(); // Yeni sekmeyi ekrana bas
+        }
+
+        function saveToLocalStorage() {
+            saveCurrentStudentState(); // O anki ekranı da objeye at
+            localStorage.setItem('ydtCampSchedules', JSON.stringify(studentsData));
+            showToast('Tüm öğrencilerin programları kaydedildi!', 'emerald');
+        }
+
+        function loadFromLocalStorage() {
+            const stored = localStorage.getItem('ydtCampSchedules');
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    if (parsed["Batın Kartal"] !== undefined) {
+                        studentsData = parsed;
+                    }
+                } catch (e) {
+                    console.error("Geçmiş veriler okunamadı", e);
+                }
+            }
+            loadCurrentStudentState();
+        }
+
+        function renderCategories() {
+            subjects.forEach((subject, subIndex) => {
+                const categoryDiv = document.createElement('div');
+                
+                // Category Header
+                const header = document.createElement('h3');
+                header.className = `text-sm font-bold text-${subject.color}-600 mb-2 uppercase tracking-wider`;
+                header.textContent = subject.name;
+                categoryDiv.appendChild(header);
+
+                // Topics List
+                const list = document.createElement('div');
+                list.className = "space-y-2";
+
+                subject.topics.forEach((topic, topIndex) => {
+                    const id = `cb_${subIndex}_${topIndex}`;
+                    
+                    const label = document.createElement('label');
+                    label.className = "flex items-start gap-3 cursor-pointer group";
+                    label.setAttribute('for', id);
+
+                    label.innerHTML = `
+                        <div class="relative flex items-center justify-center mt-0.5">
+                            <input type="checkbox" id="${id}" value="${topic}" data-category="${subject.name}" class="peer hidden topic-checkbox">
+                            <div class="w-5 h-5 border-2 border-slate-300 rounded transition-colors group-hover:border-${subject.color}-400 peer-checked:bg-${subject.color}-50 peer-checked:border-${subject.color}-500 flex items-center justify-center">
+                                <i data-lucide="check" class="w-3 h-3 text-${subject.color}-600 opacity-0 transform scale-50 transition-all check-icon"></i>
+                            </div>
+                        </div>
+                        <span class="text-sm text-slate-700 group-hover:text-slate-900 select-none leading-tight">${topic}</span>
+                    `;
+                    list.appendChild(label);
+                });
+
+                categoryDiv.appendChild(list);
+                categoriesContainer.appendChild(categoryDiv);
+            });
+            lucide.createIcons();
+        }
+
+        function generateSchedule() {
+            const checkboxes = document.querySelectorAll('.topic-checkbox:checked');
+            
+            if (checkboxes.length === 0) {
+                errorMsg.classList.remove('hidden');
+                setTimeout(() => errorMsg.classList.add('hidden'), 3000);
+                return;
+            }
+
+            // Group selected by category type
+            let trkTopics = [];
+            let matTopics = [];
+            let otherTopics = [];
+
+            checkboxes.forEach(cb => {
+                if (cb.dataset.category.includes("Türkçe")) trkTopics.push(cb.value);
+                else if (cb.dataset.category.includes("Matematik")) matTopics.push(cb.value);
+                else otherTopics.push(`[${cb.dataset.category.split(' ')[1]}] ${cb.value}`); // Tag others
+            });
+
+            // Distribute topics evenly across 8 weeks
+            const schedule = weeks.map(w => ({ ...w, trk: [], mat: [], other: [] }));
+
+            const distribute = (sourceArray, targetKey) => {
+                sourceArray.forEach((topic, index) => {
+                    const weekIndex = index % 8; // Round robin distribution
+                    schedule[weekIndex][targetKey].push(topic);
+                });
+            };
+
+            distribute(trkTopics, 'trk');
+            distribute(matTopics, 'mat');
+            distribute(otherTopics, 'other');
+
+            renderTable(schedule);
+        }
+
+        function renderTable(schedule) {
+            tableBody.innerHTML = '';
+
+            schedule.forEach((week, index) => {
+                const tr = document.createElement('tr');
+                tr.className = index % 2 === 0 ? "bg-white" : "bg-slate-50/50";
+                
+                tr.innerHTML = `
+                    <td class="p-3 border-b border-slate-100 font-semibold text-slate-800 align-top whitespace-nowrap">${week.label}</td>
+                    <td class="p-3 border-b border-slate-100 text-slate-500 align-top whitespace-nowrap">${week.dates}</td>
+                    <td class="p-3 border-b border-slate-100 align-top drop-zone min-w-[200px]" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">${formatTopics(week.trk)}</td>
+                    <td class="p-3 border-b border-slate-100 align-top drop-zone min-w-[200px]" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">${formatTopics(week.mat)}</td>
+                    <td class="p-3 border-b border-slate-100 align-top drop-zone min-w-[200px]" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">${formatTopics(week.other)}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            emptyState.classList.add('hidden');
+            tableContainer.classList.remove('hidden');
+            tableContainer.classList.add('fade-in');
+            copyBtn.classList.remove('hidden');
+            copyBtn.classList.add('fade-in');
+            
+            checkEmptyZones();
+            lucide.createIcons();
+        }
+
+        function formatTopics(topicArray) {
+            if (topicArray.length === 0) return "";
+            return topicArray.map(t => `
+                <div draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)" class="draggable-topic mb-2 p-2 bg-white border border-slate-200 rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:border-indigo-400 hover:shadow transition-all text-slate-700 text-[13px] font-medium flex items-start gap-2 select-none group">
+                    <i data-lucide="grip-vertical" class="w-4 h-4 text-slate-400 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity mt-0.5"></i>
+                    <span class="topic-text leading-snug flex-grow">${t}</span>
+                </div>
+            `).join('');
+        }
+
+        function dragStart(e) {
+            const target = e.currentTarget; // Elementi kaybolmadan önce değişkene alıyoruz
+            draggedItem = target;
+            setTimeout(() => target.classList.add('opacity-40', 'scale-95'), 0);
+        }
+
+        function dragEnd(e) {
+            e.currentTarget.classList.remove('opacity-40', 'scale-95');
+            draggedItem = null;
+            document.querySelectorAll('.drop-zone').forEach(zone => zone.classList.remove('drag-over'));
+        }
+
+        function dragOver(e) {
+            e.preventDefault(); // Drop işlemine izin ver
+        }
+
+        function dragEnter(e) {
+            e.preventDefault();
+            const dropZone = e.currentTarget;
+            if(dropZone.classList.contains('drop-zone')) {
+                dropZone.classList.add('drag-over');
+            }
+        }
+
+        function dragLeave(e) {
+            const dropZone = e.currentTarget;
+            // İçindeki elementlere girerken dragLeave tetiklenmesini engelle
+            if(dropZone.classList.contains('drop-zone') && !dropZone.contains(e.relatedTarget)) {
+                dropZone.classList.remove('drag-over');
+            }
+        }
+
+        function drop(e) {
+            e.preventDefault();
+            const dropZone = e.currentTarget.closest('.drop-zone');
+            
+            if (dropZone && draggedItem) {
+                dropZone.classList.remove('drag-over');
+                dropZone.appendChild(draggedItem);
+                checkEmptyZones();
+            }
+        }
+
+        function checkEmptyZones() {
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                const topics = zone.querySelectorAll('.draggable-topic');
+                let placeholder = zone.querySelector('.empty-placeholder');
+                
+                if (topics.length === 0 && !placeholder) {
+                    zone.innerHTML += `<div class="empty-placeholder text-slate-300 italic text-xs py-2 text-center rounded-lg border border-dashed border-slate-200">Buraya sürükle</div>`;
+                } else if (topics.length > 0 && placeholder) {
+                    placeholder.remove();
+                }
+            });
+        }
+
+        function copyToClipboard() {
+            const table = document.getElementById('scheduleTable');
+            let textData = "";
+
+            // Parse Table
+            for (let i = 0; i < table.rows.length; i++) {
+                let row = table.rows[i];
+                let rowData = [];
+                for (let j = 0; j < row.cells.length; j++) {
+                    let cellText = "";
+                    if (i > 0 && j > 1) { 
+                        // Topic cells: Sürükle-bırak hücrelerinden sadece metinleri al
+                        const topicSpans = Array.from(row.cells[j].querySelectorAll('.draggable-topic .topic-text'));
+                        if (topicSpans.length > 0) {
+                            cellText = topicSpans.map(span => "- " + span.innerText.trim()).join("\n");
+                        } else {
+                            cellText = "-";
+                        }
+                    } else {
+                        // Headers and first two columns (Week, Dates)
+                        cellText = row.cells[j].innerText.trim();
+                    }
+                    
+                    if(cellText.includes('\n') || cellText.includes('"')) {
+                        cellText = '"' + cellText.replace(/"/g, '""') + '"';
+                    }
+                    rowData.push(cellText);
+                }
+                textData += rowData.join("\t") + "\n"; // Tab separated for Google Sheets
+            }
+
+            try {
+                // Gizli bir metin alanı oluştur
+                const textArea = document.createElement("textarea");
+                textArea.value = textData;
+                
+                // Sayfanın aşağı kaymasını engelle
+                textArea.style.top = "0";
+                textArea.style.left = "0";
+                textArea.style.position = "fixed";
+
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+
+                // Kopyalama komutunu çalıştır
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+
+                if (successful) {
+                    showToast('Tablo panoya kopyalandı! Google Sheets\'e yapıştırabilirsiniz.', 'emerald');
+                } else {
+                    console.error('Kopyalama başarısız oldu.');
+                }
+            } catch (err) {
+                console.error('Kopyalama sırasında bir hata oluştu: ', err);
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCategories();
+            loadFromLocalStorage(); // Kayıtlı verileri yükle
+        });
+        
+        generateBtn.addEventListener('click', generateSchedule);
+        copyBtn.addEventListener('click', copyToClipboard);
+        saveBtn.addEventListener('click', saveToLocalStorage);
+        
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                switchStudent(e.currentTarget.dataset.student);
+            });
+        });
+
+    </script>
+</body>
+</html>
