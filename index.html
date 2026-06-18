@@ -460,9 +460,24 @@
                 tr.innerHTML = `
                     <td class="p-3 border-b border-slate-100 font-semibold text-slate-800 align-top whitespace-nowrap">${week.label}</td>
                     <td class="p-3 border-b border-slate-100 text-slate-500 align-top whitespace-nowrap">${week.dates}</td>
-                    <td class="p-3 border-b border-slate-100 align-top drop-zone min-w-[200px]" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">${formatTopics(week.trk)}</td>
-                    <td class="p-3 border-b border-slate-100 align-top drop-zone min-w-[200px]" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">${formatTopics(week.mat)}</td>
-                    <td class="p-3 border-b border-slate-100 align-top drop-zone min-w-[200px]" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">${formatTopics(week.other)}</td>
+                    <td class="p-3 border-b border-slate-100 align-top drop-zone min-w-[200px] group" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">
+                        ${formatTopics(week.trk)}
+                        <button class="add-custom-note-btn mt-2 text-[11px] font-semibold text-slate-400 hover:text-indigo-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity w-full" onclick="addCustomNoteToCell(this)">
+                            <i data-lucide="plus" class="w-3 h-3"></i> Özel Not Yaz
+                        </button>
+                    </td>
+                    <td class="p-3 border-b border-slate-100 align-top drop-zone min-w-[200px] group" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">
+                        ${formatTopics(week.mat)}
+                        <button class="add-custom-note-btn mt-2 text-[11px] font-semibold text-slate-400 hover:text-indigo-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity w-full" onclick="addCustomNoteToCell(this)">
+                            <i data-lucide="plus" class="w-3 h-3"></i> Özel Not Yaz
+                        </button>
+                    </td>
+                    <td class="p-3 border-b border-slate-100 align-top drop-zone min-w-[200px] group" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">
+                        ${formatTopics(week.other)}
+                        <button class="add-custom-note-btn mt-2 text-[11px] font-semibold text-slate-400 hover:text-indigo-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity w-full" onclick="addCustomNoteToCell(this)">
+                            <i data-lucide="plus" class="w-3 h-3"></i> Özel Not Yaz
+                        </button>
+                    </td>
                 `;
                 tableBody.appendChild(tr);
             });
@@ -480,9 +495,9 @@
         function createTopicCardHtml(t) {
             return `
                 <div draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)" class="draggable-topic mb-2 p-2 bg-white border border-slate-200 rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:border-indigo-400 hover:shadow transition-all text-slate-700 text-[13px] font-medium flex items-start gap-2 select-none group relative">
-                    <i data-lucide="grip-vertical" class="w-4 h-4 text-slate-400 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity mt-0.5"></i>
-                    <span class="topic-text leading-snug flex-grow pr-5">${t}</span>
-                    <button onclick="this.closest('.draggable-topic').remove(); checkEmptyZones();" class="absolute right-1 top-1 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-1" title="Listeden Çıkar">
+                    <i data-lucide="grip-vertical" class="w-4 h-4 text-slate-400 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity mt-0.5" contenteditable="false"></i>
+                    <span class="topic-text leading-snug flex-grow pr-5 outline-none focus:bg-slate-50 focus:ring-1 focus:ring-indigo-300 rounded px-1 -ml-1 transition-colors cursor-text" contenteditable="true" onfocus="this.closest('.draggable-topic').setAttribute('draggable', 'false')" onblur="this.closest('.draggable-topic').setAttribute('draggable', 'true'); saveCurrentStudentState()">${t}</span>
+                    <button onclick="this.closest('.draggable-topic').remove(); checkEmptyZones(); saveCurrentStudentState();" class="absolute right-1 top-1 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-1" title="Listeden Çıkar" contenteditable="false">
                         <i data-lucide="x" class="w-3 h-3"></i>
                     </button>
                 </div>
@@ -526,6 +541,24 @@
             }
         }
 
+        function addCustomNoteToCell(btn) {
+            const dropZone = btn.closest('.drop-zone');
+            const cardHtml = createTopicCardHtml("");
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = cardHtml.trim();
+            const newCard = tempDiv.firstChild;
+            
+            // Butondan hemen önce ekle (böylece buton hep en altta kalır)
+            dropZone.insertBefore(newCard, btn);
+            checkEmptyZones();
+            lucide.createIcons();
+            
+            // Eklendikten sonra yazma alanına otomatik odaklan
+            const textSpan = newCard.querySelector('.topic-text');
+            textSpan.focus();
+            saveCurrentStudentState();
+        }
+
         function dragTopicFromList(e, topic) {
             draggedFromList = { topic };
             e.currentTarget.classList.add('opacity-50');
@@ -547,17 +580,21 @@
             
             if (dropZone) {
                 dropZone.classList.remove('drag-over');
+                const btn = dropZone.querySelector('.add-custom-note-btn');
                 
                 if (draggedItem) {
-                    dropZone.appendChild(draggedItem);
+                    if (btn) dropZone.insertBefore(draggedItem, btn);
+                    else dropZone.appendChild(draggedItem);
                 } else if (draggedFromList) {
                     const cardHtml = createTopicCardHtml(draggedFromList.topic);
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = cardHtml.trim();
-                    dropZone.appendChild(tempDiv.firstChild);
+                    if (btn) dropZone.insertBefore(tempDiv.firstChild, btn);
+                    else dropZone.appendChild(tempDiv.firstChild);
                     lucide.createIcons();
                 }
                 checkEmptyZones();
+                saveCurrentStudentState();
             }
         }
 
@@ -565,9 +602,15 @@
             document.querySelectorAll('.drop-zone').forEach(zone => {
                 const topics = zone.querySelectorAll('.draggable-topic');
                 let placeholder = zone.querySelector('.empty-placeholder');
+                const btn = zone.querySelector('.add-custom-note-btn');
                 
                 if (topics.length === 0 && !placeholder) {
-                    zone.innerHTML += `<div class="empty-placeholder text-slate-300 italic text-xs py-2 text-center rounded-lg border border-dashed border-slate-200">Buraya sürükle</div>`;
+                    const ph = document.createElement('div');
+                    ph.className = "empty-placeholder text-slate-300 italic text-xs py-2 text-center rounded-lg border border-dashed border-slate-200 mb-2 pointer-events-none";
+                    ph.innerText = "Buraya sürükle";
+                    
+                    if (btn) zone.insertBefore(ph, btn);
+                    else zone.appendChild(ph);
                 } else if (topics.length > 0 && placeholder) {
                     placeholder.remove();
                 }
