@@ -74,17 +74,22 @@
                         <i data-lucide="check-square" class="w-5 h-5 text-indigo-500"></i>
                         Eksik Konuları Seçin
                     </h2>
-                    <p class="text-xs text-slate-500 mb-4 pb-4 border-b border-slate-100">Öğrencinin ihtiyacına göre ilgili konuları işaretleyin.</p>
+                    <p class="text-xs text-slate-500 mb-4 pb-4 border-b border-slate-100">Konuları seçip otomatik dağıtabilir veya listeden tabloya <b>sürükleyerek</b> manuel ekleyebilirsiniz.</p>
                     
                     <div class="overflow-y-auto flex-grow pr-2 space-y-6" id="categories-container">
                         <!-- Categories will be injected here via JS -->
                     </div>
 
                     <div class="pt-4 border-t border-slate-100 mt-4">
-                        <button id="generateBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-xl transition-colors shadow-md flex items-center justify-center gap-2">
-                            <i data-lucide="cog" class="w-5 h-5"></i>
-                            Programı Oluştur (8 Hafta)
-                        </button>
+                        <div class="flex gap-2">
+                            <button id="generateBtn" class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-xl transition-colors shadow-md flex items-center justify-center gap-2">
+                                <i data-lucide="cog" class="w-5 h-5"></i>
+                                Programı Oluştur
+                            </button>
+                            <button id="generateEmptyBtn" class="shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center" title="Boş Tablo İle Başla">
+                                <i data-lucide="layout-grid" class="w-5 h-5"></i>
+                            </button>
+                        </div>
                         <div id="errorMsg" class="hidden text-rose-500 text-sm mt-2 text-center font-medium">Lütfen en az bir konu seçin!</div>
                     </div>
                 </div>
@@ -169,9 +174,9 @@
                 color: "blue",
                 topics: [
                     "Temel Kavramlar", "Sayı Basamakları", "Rasyonel Sayılar", 
-                    "Birinci Dereceden Denklemler", "Üslü ve Köklü Sayılar", 
+                    "Birinci Dereceden Denklemler", "Basit Eşitsizlik ve Mutlak Değer", "Üslü ve Köklü Sayılar", 
                     "Çarpanlara Ayırma", "Oran - Orantı", "Sayı ve Kesir Problemleri",
-                    "Yaş ve Yüzde Problemleri", "Kümeler", "Fonksiyonlara Giriş"
+                    "Yaş ve Yüzde Problemleri", "Hareket Problemleri", "Kümeler", "Fonksiyonlara Giriş"
                 ]
             },
             {
@@ -181,7 +186,7 @@
                     "Tarih Bilimine Giriş & İlk Çağ", "İlk ve Orta Çağda Türk Dünyası",
                     "İslam Tarihi & Türk-İslam Devletleri", "Osmanlı (Kuruluş ve Yükselme)",
                     "Coğrafya: Doğa ve İnsan", "Dünya'nın Şekli ve Hareketleri",
-                    "Harita Bilgisi ve İklim", "Felsefeyle Tanışma & Bilgi Felsefesi"
+                    "Harita Bilgisi ve İklim", "Yeryüzü Şekilleri", "Felsefeyle Tanışma & Bilgi Felsefesi"
                 ]
             },
             {
@@ -229,8 +234,10 @@
         const toastIcon = document.getElementById('toastIcon');
         const scheduleTitle = document.getElementById('scheduleTitle');
         const tabBtns = document.querySelectorAll('.tab-btn');
+        const generateEmptyBtn = document.getElementById('generateEmptyBtn');
 
         let draggedItem = null;
+        let draggedFromList = null;
 
         // State Management
         let currentStudent = "Batın Kartal";
@@ -376,14 +383,21 @@
                     label.className = "flex items-start gap-3 cursor-pointer group";
                     label.setAttribute('for', id);
 
+                    const escapedTopic = topic.replace(/'/g, "\\'");
+
                     label.innerHTML = `
-                        <div class="relative flex items-center justify-center mt-0.5">
+                        <div class="relative flex items-center justify-center mt-0.5 shrink-0">
                             <input type="checkbox" id="${id}" value="${topic}" data-category="${subject.name}" class="peer hidden topic-checkbox">
                             <div class="w-5 h-5 border-2 border-slate-300 rounded transition-colors group-hover:border-${subject.color}-400 peer-checked:bg-${subject.color}-50 peer-checked:border-${subject.color}-500 flex items-center justify-center">
                                 <i data-lucide="check" class="w-3 h-3 text-${subject.color}-600 opacity-0 transform scale-50 transition-all check-icon"></i>
                             </div>
                         </div>
-                        <span class="text-sm text-slate-700 group-hover:text-slate-900 select-none leading-tight">${topic}</span>
+                        <div class="flex-grow flex items-start gap-2" draggable="true" ondragstart="dragTopicFromList(event, '${escapedTopic}')" ondragend="dragTopicEnd(event)">
+                            <span class="text-sm text-slate-700 group-hover:text-slate-900 select-none leading-tight flex-grow">${topic}</span>
+                            <div class="shrink-0 p-1 bg-slate-50 text-slate-300 rounded opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing hover:bg-slate-200 hover:text-slate-500 transition-all" title="Tabloya sürükle">
+                                <i data-lucide="grip-vertical" class="w-3 h-3"></i>
+                            </div>
+                        </div>
                     `;
                     list.appendChild(label);
                 });
@@ -431,6 +445,11 @@
             renderTable(schedule);
         }
 
+        function generateEmptySchedule() {
+            const schedule = weeks.map(w => ({ ...w, trk: [], mat: [], other: [] }));
+            renderTable(schedule);
+        }
+
         function renderTable(schedule) {
             tableBody.innerHTML = '';
 
@@ -458,14 +477,21 @@
             lucide.createIcons();
         }
 
+        function createTopicCardHtml(t) {
+            return `
+                <div draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)" class="draggable-topic mb-2 p-2 bg-white border border-slate-200 rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:border-indigo-400 hover:shadow transition-all text-slate-700 text-[13px] font-medium flex items-start gap-2 select-none group relative">
+                    <i data-lucide="grip-vertical" class="w-4 h-4 text-slate-400 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity mt-0.5"></i>
+                    <span class="topic-text leading-snug flex-grow pr-5">${t}</span>
+                    <button onclick="this.closest('.draggable-topic').remove(); checkEmptyZones();" class="absolute right-1 top-1 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-1" title="Listeden Çıkar">
+                        <i data-lucide="x" class="w-3 h-3"></i>
+                    </button>
+                </div>
+            `;
+        }
+
         function formatTopics(topicArray) {
             if (topicArray.length === 0) return "";
-            return topicArray.map(t => `
-                <div draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)" class="draggable-topic mb-2 p-2 bg-white border border-slate-200 rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:border-indigo-400 hover:shadow transition-all text-slate-700 text-[13px] font-medium flex items-start gap-2 select-none group">
-                    <i data-lucide="grip-vertical" class="w-4 h-4 text-slate-400 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity mt-0.5"></i>
-                    <span class="topic-text leading-snug flex-grow">${t}</span>
-                </div>
-            `).join('');
+            return topicArray.map(t => createTopicCardHtml(t)).join('');
         }
 
         function dragStart(e) {
@@ -500,13 +526,37 @@
             }
         }
 
+        function dragTopicFromList(e, topic) {
+            draggedFromList = { topic };
+            e.currentTarget.classList.add('opacity-50');
+            if(e.dataTransfer) {
+                e.dataTransfer.setData('text/plain', topic);
+                e.dataTransfer.effectAllowed = 'copy';
+            }
+        }
+
+        function dragTopicEnd(e) {
+            e.currentTarget.classList.remove('opacity-50');
+            draggedFromList = null;
+            document.querySelectorAll('.drop-zone').forEach(zone => zone.classList.remove('drag-over'));
+        }
+
         function drop(e) {
             e.preventDefault();
             const dropZone = e.currentTarget.closest('.drop-zone');
             
-            if (dropZone && draggedItem) {
+            if (dropZone) {
                 dropZone.classList.remove('drag-over');
-                dropZone.appendChild(draggedItem);
+                
+                if (draggedItem) {
+                    dropZone.appendChild(draggedItem);
+                } else if (draggedFromList) {
+                    const cardHtml = createTopicCardHtml(draggedFromList.topic);
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = cardHtml.trim();
+                    dropZone.appendChild(tempDiv.firstChild);
+                    lucide.createIcons();
+                }
                 checkEmptyZones();
             }
         }
@@ -535,32 +585,34 @@
                 for (let j = 0; j < row.cells.length; j++) {
                     let cellText = "";
                     if (i > 0 && j > 1) { 
-                        // Topic cells: Sürükle-bırak hücrelerinden sadece metinleri al
+                        // Topic cells: Sürükle-bırak hücrelerinden sadece metinleri al, gereksiz butonları atla
                         const topicSpans = Array.from(row.cells[j].querySelectorAll('.draggable-topic .topic-text'));
                         if (topicSpans.length > 0) {
+                            // Elemanları '- ' ile başlat ve aralarına yeni satır koy
                             cellText = topicSpans.map(span => "- " + span.innerText.trim()).join("\n");
                         } else {
-                            cellText = "-";
+                            cellText = "-"; // Hücre boşsa tire koy
                         }
                     } else {
                         // Headers and first two columns (Week, Dates)
                         cellText = row.cells[j].innerText.trim();
                     }
                     
+                    // Çok ÖNEMLİ: Eğer hücrenin içinde yeni satır (\n) varsa, Google Sheets'in
+                    // bunu tek hücrede alt alta yazması için metni çift tırnak içine almalıyız.
                     if(cellText.includes('\n') || cellText.includes('"')) {
                         cellText = '"' + cellText.replace(/"/g, '""') + '"';
                     }
+                    
                     rowData.push(cellText);
                 }
                 textData += rowData.join("\t") + "\n"; // Tab separated for Google Sheets
             }
 
             try {
-                // Gizli bir metin alanı oluştur
+                // Gizli bir metin alanı oluştur ve veriyi kopyala
                 const textArea = document.createElement("textarea");
                 textArea.value = textData;
-                
-                // Sayfanın aşağı kaymasını engelle
                 textArea.style.top = "0";
                 textArea.style.left = "0";
                 textArea.style.position = "fixed";
@@ -569,7 +621,6 @@
                 textArea.focus();
                 textArea.select();
 
-                // Kopyalama komutunu çalıştır
                 const successful = document.execCommand('copy');
                 document.body.removeChild(textArea);
 
@@ -590,6 +641,7 @@
         });
         
         generateBtn.addEventListener('click', generateSchedule);
+        generateEmptyBtn.addEventListener('click', generateEmptySchedule);
         copyBtn.addEventListener('click', copyToClipboard);
         saveBtn.addEventListener('click', saveToLocalStorage);
         
